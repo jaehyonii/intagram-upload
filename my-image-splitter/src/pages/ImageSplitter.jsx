@@ -1,10 +1,6 @@
 import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 const ImageSplitter = () => {
-  const [image, setImage] = useState(null);
   const [segments, setSegments] = useState([]);
 
   const handleImageChange = (e) => {
@@ -39,40 +35,85 @@ const ImageSplitter = () => {
   };
 
   const sendToServer = async () => {
-    for (let i = 0; i < segments.length; i++) {
-      const base64Image = segments[i].split(",")[1];
+    // base64 문자열만 추출
+    const imagesPayload = segments.map((segment, i) => ({
+      filename: `segment_${i + 1}.png`,
+      image_data: segment.split(",")[1], // base64 부분만 추출
+    }));
 
-      await fetch("http://localhost:8000/upload", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          filename: `segment_${i + 1}.png`,
-          image_data: base64Image
-        })
-      });
-    }
-    alert("이미지를 서버로 전송했습니다.");
+    // 한 번의 POST 요청으로 모두 전송
+    var response = await fetch("http://localhost:8000/upload-multiple", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        images: imagesPayload,
+      }),
+    });
+    response = await response.json()
+    alert(`status:${response.status}, uploaded_count: ${response.uploaded_count}`);
+  };
+
+
+  // ---------- 스타일 ----------
+  const containerStyle = {
+    padding: '16px',
+    fontFamily: 'sans-serif',
+  };
+
+  const imageRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '16px',
+    marginTop: '16px',
+    overflowX: 'auto',
+    paddingBottom: '8px',
+  };
+
+  const imageCardStyle = {
+    minWidth: '200px',
+    border: '1px solid #ccc',
+    borderRadius: '8px',
+    padding: '8px',
+    backgroundColor: '#fff',
+    boxShadow: '2px 2px 6px rgba(0, 0, 0, 0.1)',
+    flexShrink: 0,
+  };
+
+  const imageStyle = {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+  };
+
+  const buttonStyle = {
+    marginTop: '20px',
+    padding: '10px 20px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '16px',
   };
 
   return (
-    <div className="flex flex-col items-center p-4 space-y-4">
-      <Input type="file" accept="image/*" onChange={handleImageChange} />
+    <div style={containerStyle}>
+      <input type="file" accept="image/*" onChange={handleImageChange} />
+
       {segments.length > 0 && (
         <>
-          <div className="grid grid-cols-3 gap-2">
+          <div style={imageRowStyle}>
             {segments.map((src, index) => (
-              <Card key={index}>
-                <CardContent>
-                  <img src={src} alt={`Segment ${index + 1}`} className="w-full" />
-                </CardContent>
-              </Card>
+              <div key={index} style={imageCardStyle}>
+                <img src={src} alt={`Segment ${index + 1}`} style={imageStyle} />
+              </div>
             ))}
           </div>
-          <Button onClick={sendToServer}>
+          <button style={buttonStyle} onClick={sendToServer}>
             서버로 전송
-          </Button>
+          </button>
         </>
       )}
     </div>
